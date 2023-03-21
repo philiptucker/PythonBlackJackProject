@@ -1,8 +1,7 @@
 
-def main():
-    print("BlackJack Program")
 
-    #deck of cards [Suit, Rank, point value]
+def deckBuild():
+    # deck of cards [Suit, Rank, point value]
     deck = [
         ["Hearts", 2, 2],
         ["Hearts", 3, 3],
@@ -60,6 +59,14 @@ def main():
         ["Clubs", "King", 10],
         ["Clubs", "Ace", 11]
     ]
+    return deck
+
+
+def main():
+    print("BlackJack Program")
+
+    deck = deckBuild()
+
 
 if __name__ == '__main__':
     main()
