@@ -1,3 +1,6 @@
+import db
+from decimal import Decimal
+from decimal import ROUND_HALF_UP
 
 
 def deckBuild():
@@ -63,9 +66,30 @@ def deckBuild():
 
 
 def main():
-    print("BlackJack Program")
-
+    print("BlackJack Program\nBlackjack payout is 3:2")
+    money = Decimal(db.loadMoney())
+    money = money.quantize(Decimal("1.00"), ROUND_HALF_UP)
+    print(f"Money: {money}")
     deck = deckBuild()
+    dealerHand = []
+    playerHand = []
+    keepGoing = 'y'
+
+    while keepGoing.lower() == 'y':
+        while True:
+            try:
+                betAmount = round(float(input("Bet amount: \t")), 2)
+                break
+            except ValueError:
+                print("Bet amount must be an integer or float value please try again.")
+
+        betAmount = Decimal(betAmount)
+        betAmount = betAmount.quantize(Decimal("1.00"))
+        print(f"{betAmount}")
+
+        keepGoing = input("\nPlay again? (y/n): \t")
+
+    print("\nCome back soon!\nBye!")
 
 
 if __name__ == '__main__':
