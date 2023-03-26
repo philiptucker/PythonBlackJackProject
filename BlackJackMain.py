@@ -86,24 +86,125 @@ def deckBuild():
     return deck
 
 
-def playerBlackJack(playerPoints):
-    #TODO Implement into Code
+def moneyCheck(money):
+    if money < 5:
+        print("Cannot afford minimum bet amount.")
+        poor = input("Would you like more funds? (y/n): ")
+        if poor.lower() != 'y':
+            return True
+        else:
+            print("Here is a 100.00 loan.")
+            money += Decimal(100.00)
+            db.saveMoney(money)
+            print(f"Money: {money}")
+
+
+def startDeal(deck, dealerHand, playerHand):
+    print("\nDEALER'S SHOW CARD:")
+    dealCard = deck.pop(0)
+    dealerPoints = dealCard[2]
+    dealerHand.append(dealCard)
+
+    dealCard = deck.pop(0)
+    if dealCard[2] == 11 and dealerPoints > 10:
+        dealCard.pop(2)
+        dealCard.append(1)
+    dealerHand.append(dealCard)
+
+    dealerCard = dealerHand[0]
+    print(f"{dealerCard[1]} of {dealerCard[0]}")
+
+    print("\nYOUR CARDS:")
+    playerPoints = 0
+
+    dealCard = deck.pop(0)
+    print(f"{dealCard[1]} of {dealCard[0]}")
+    aceCheck(dealCard, playerPoints)
+    playerPoints += dealCard[2]
+    playerHand.append(dealCard)
+
+    dealCard = deck.pop(0)
+    print(f"{dealCard[1]} of {dealCard[0]}")
+    aceCheck(dealCard, playerPoints)
+    playerPoints += dealCard[2]
+    playerHand.append(dealCard)
+
+
+def aceCheck(dealCard, playerPoints):
+    if dealCard[2] == 11 and playerPoints > 10:
+        dealCard.pop(2)
+        dealCard.append(1)
+        print("Ace will be treated as a 1")
+    elif dealCard[2] == 11:
+        choice = int(input("Would you like this Ace to be a 1 or an 11? "))
+        while choice != 1 and choice != 11:
+            print("Must select 1 or 11. Please try again")
+            choice = int(input("Would you like this to be a 1 or an 11? "))
+        if choice == 1:
+            dealCard.pop(2)
+            dealCard.append(1)
+            print("Ace will be treated as a 1")
+        else:
+            print("Ace will be treated as an 11")
+
+
+def playerBlackJack(playerHand):
+    playerPoints = 0
+    for card in playerHand:
+        playerPoints += card[2]
     if playerPoints == 21:
+        print("PLAYER'S BLACKJACK!")
         return True
     else:
         return False
 
 
-def dealerBlackJack(dealerPoints):
-    #TODO Implement into Code
-    if dealerPoints == 21:
-        return True
+def dealerBlackJack(dealerHand):
+    dealerCard = dealerHand[0]
+    if dealerCard[2] >= 10:
+        dealerPoints = 0
+        for card in dealerHand:
+            dealerPoints += card[2]
+        if dealerPoints == 21:
+            print("\nDEALER'S CARDS:")
+            for card in dealerHand:
+                print(f"{card[1]} of {card[0]}")
+            print("DEALER'S BLACKJACK!")
+            return True
+        else:
+            return False
     else:
         return False
+
+
+def blackJackPointCheck(playerHand, dealerHand, money, betAmount):
+    playerPoints = 0
+    dealerPoints = 0
+    for card in playerHand:
+        playerPoints += card[2]
+    for card in dealerHand:
+        dealerPoints += card[2]
+    print(f"\nYOUR POINTS: \t\t{playerPoints}"
+          f"\nDEALER'S POINTS: \t{dealerPoints}\n")
+
+    if playerPoints > dealerPoints:
+        print("Congrats, you win!")
+        money += betAmount * Decimal(1.5)
+        money = money.quantize(Decimal("1.00"), ROUND_HALF_UP)
+    elif playerPoints == dealerPoints:
+        print("Tie game. Return bet.")
+    else:
+        print("Sorry. You lose.")
+        money -= betAmount
+    db.saveMoney(money)
+    print(f"Money: {money}")
 
 
 def hitStand(deck, playerHand):
-    while True:
+    playerPoints = 0
+    for card in playerHand:
+        playerPoints += card[2]
+    while playerPoints < 21:
         draw = input("\nHit or stand? (hit/stand): ")
         if draw.lower() == "hit":
             playerPoints = 0
@@ -113,17 +214,11 @@ def hitStand(deck, playerHand):
                 print(f"{card[1]} of {card[0]}")
                 playerPoints += card[2]
             print(f"{dealCard[1]} of {dealCard[0]}")
-            if dealCard[2] == 11 & playerPoints > 10:
-                dealCard.pop(2)
-                dealCard.append(1)
-            elif dealCard[2] == "11":
-                choice = input("Would you like this to be a 1 or an 11? ")
-                while choice != "1" or choice != "11":
-                    print("Must select 1 or 11. Please try again")
-                if choice == "1":
-                    dealCard.pop(2)
-                    dealCard.append(1)
+
+            aceCheck(dealCard, playerPoints)
+            playerPoints += dealCard[2]
             playerHand.append(dealCard)
+
             if playerPoints > 21:
                 print("BUST!")
 
@@ -133,11 +228,20 @@ def hitStand(deck, playerHand):
             print("Invalid response. Please try again.")
 
 
-def dealerHitStand(deck, dealerHand, dealerPoints):
-    while dealerPoints < 17:
+def dealerHitStand(deck, dealerHand, playerHand):
+    print("\nDEALER'S CARDS:")
+    dealerPoints = 0
+    playerPoints = 0
+    for card in dealerHand:
+        print(f"{card[1]} of {card[0]}")
+        dealerPoints += card[2]
+    for card in playerHand:
+        playerPoints += card[2]
+
+    while dealerPoints < 17 and playerPoints <= 21:
         print("\nDealer Hits")
         dealCard = deck.pop(0)
-        if dealCard[2] == 11 & dealerPoints > 10:
+        if dealCard[2] == 11 and dealerPoints > 10:
             dealCard.pop(2)
             dealCard.append(1)
         dealerPoints += dealCard[2]
@@ -159,10 +263,10 @@ def pointCheck(playerHand, dealerHand, money, betAmount):
     print(f"\nYOUR POINTS: \t\t{playerPoints}"
           f"\nDEALER'S POINTS: \t{dealerPoints}\n")
 
-    if playerPoints > dealerPoints & playerPoints <= 21:
+    if (dealerPoints > 21) or (playerPoints > dealerPoints and playerPoints <= 21):
         print("Congrats, you win!")
         money += betAmount
-    elif playerPoints == dealerPoints & playerPoints <= 21:
+    elif playerPoints == dealerPoints:
         print("Tie game. Return bet.")
     else:
         print("Sorry. You lose.")
@@ -176,8 +280,8 @@ def main():
 
     deck = deckBuild()
     random.shuffle(deck)
-    keepGoing = 'y'
 
+    keepGoing = 'y'
     while keepGoing.lower() == 'y':
         if len(deck) < 26:
             print("\nDeck running low, reloading deck.")
@@ -189,46 +293,28 @@ def main():
         money = Decimal(db.loadMoney())
         money = money.quantize(Decimal("1.00"), ROUND_HALF_UP)
         print(f"\nMoney: {money}")
+        poor = moneyCheck(money)
+        if poor is True:
+            break
+        money = Decimal(db.loadMoney())
+        money = money.quantize(Decimal("1.00"), ROUND_HALF_UP)
         betAmount = betAccept(money)
 
-        print("\nDEALER'S SHOW CARD:")
-        dealCard = deck.pop(0)
-        dealerHand.append(dealCard)
-        dealCard = deck.pop(0)
-        dealerHand.append(dealCard)
-        card = dealerHand[0]
-        print(f"{card[1]} of {card[0]}")
+        startDeal(deck, dealerHand, playerHand)
 
-        if card[2] >= 10:
-            dealerPoints = 0
-            for card in dealerHand:
-                dealerPoints += card[2]
-            if dealerPoints == 21:
-                card = dealerHand[1]
-                print(f"{card[1]} of {card[0]}")
-                print("Dealer's BlackJack!")
+        if playerBlackJack(playerHand) is False \
+                and dealerBlackJack(dealerHand) is False:
 
-        print("\nYOUR CARDS:")
-        dealCard = deck.pop(0)
-        playerHand.append(dealCard)
-        dealCard = deck.pop(0)
-        playerHand.append(dealCard)
-        for card in playerHand:
-            print(f"{card[1]} of {card[0]}")
-
-        hitStand(deck, playerHand)
-
-        print("\nDEALER'S CARDS:")
-        dealerPoints = 0
-        for card in dealerHand:
-            print(f"{card[1]} of {card[0]}")
-            dealerPoints += card[2]
-
-        dealerHitStand(deck, dealerHand, dealerPoints)
-
-        pointCheck(playerHand, dealerHand, money, betAmount)
+            hitStand(deck, playerHand)
+            dealerHitStand(deck, dealerHand, playerHand)
+            pointCheck(playerHand, dealerHand, money, betAmount)
+        else:
+            blackJackPointCheck(playerHand, dealerHand, money, betAmount)
 
         keepGoing = input("\nPlay again? (y/n): \t")
+        while keepGoing != 'y' and keepGoing != 'n':
+            print("Invalid entry, try again.")
+            keepGoing = input("\nPlay again? (y/n): \t")
 
     print("\nCome back soon!\nBye!")
 
