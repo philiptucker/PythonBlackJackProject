@@ -1,6 +1,27 @@
 import db
+import random
 from decimal import Decimal
 from decimal import ROUND_HALF_UP
+
+
+def betAccept(money):
+    while True:
+        try:
+            betAmount = round(float(input("Bet amount: \t")), 2)
+            if betAmount > money:
+                print("Bet cannot be larger than current funds. Please try again")
+            elif betAmount > 1000:
+                print("Maximum bet is 1000. Please try again")
+            elif betAmount < 5:
+                print("Minimum bet is 5. Please try again")
+            else:
+                break
+        except ValueError:
+            print("Bet amount must be an integer or float value please try again.")
+
+    betAmount = Decimal(betAmount)
+    betAmount = betAmount.quantize(Decimal("1.00"))
+    return betAmount
 
 
 def deckBuild():
@@ -65,27 +86,58 @@ def deckBuild():
     return deck
 
 
+def pointCheck(playerHand, dealerHand, money, betAmount):
+    playerPoints = 0
+    dealerPoints = 0
+    for card in playerHand:
+        playerPoints += card[2]
+    for card in dealerHand:
+        dealerPoints += card[2]
+    print(f"\nYOUR POINTS: \t\t{playerPoints}"
+          f"\nDEALER'S POINTS: \t{dealerPoints}\n")
+
+    if playerPoints > dealerPoints:
+        print("Congrats, you win!")
+        money += betAmount
+    else:
+        print("Sorry. You lose.")
+        money -= betAmount
+    db.saveMoney(money)
+    print(f"Money: {money}")
+
+
 def main():
     print("BlackJack Program\nBlackjack payout is 3:2")
-    money = Decimal(db.loadMoney())
-    money = money.quantize(Decimal("1.00"), ROUND_HALF_UP)
-    print(f"Money: {money}")
+
     deck = deckBuild()
-    dealerHand = []
-    playerHand = []
     keepGoing = 'y'
+    random.shuffle(deck)
 
     while keepGoing.lower() == 'y':
-        while True:
-            try:
-                betAmount = round(float(input("Bet amount: \t")), 2)
-                break
-            except ValueError:
-                print("Bet amount must be an integer or float value please try again.")
+        dealerHand = []
+        playerHand = []
+        money = Decimal(db.loadMoney())
+        money = money.quantize(Decimal("1.00"), ROUND_HALF_UP)
+        print(f"Money: {money}")
+        betAmount = betAccept(money)
 
-        betAmount = Decimal(betAmount)
-        betAmount = betAmount.quantize(Decimal("1.00"))
-        print(f"{betAmount}")
+        print("\nDEALER'S SHOW CARD:")
+        dealCard = deck.pop(0)
+        dealerHand.append(dealCard)
+        dealCard = deck.pop(0)
+        dealerHand.append(dealCard)
+        card = dealerHand[0]
+        print(f"{card[1]} of {card[0]}")
+
+        print("\nYOUR CARDS:")
+        dealCard = deck.pop(0)
+        playerHand.append(dealCard)
+        dealCard = deck.pop(0)
+        playerHand.append(dealCard)
+        for card in playerHand:
+            print(f"{card[1]} of {card[0]}")
+
+        pointCheck(playerHand, dealerHand, money, betAmount)
 
         keepGoing = input("\nPlay again? (y/n): \t")
 
